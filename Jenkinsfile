@@ -32,12 +32,15 @@ pipeline {
                 withCredentials([string(credentialsId: 'DB_ConnectionString_Dev', variable: 'CONN_STR')]) {
                     // ReplaceTokens sustituye el placeholder #{...}# directamente en el archivo,
                     // que ASP.NET Core carga vía ASPNETCORE_ENVIRONMENT=opcion1 -> appsettings.opcion1.json
-                    sh 'npx --yes @qetza/replacetokens-cli -s "config-poc/appsettings.opcion1.json" -r'
+                    sh '''
+                        npx --yes @qetza/replacetokens --sources "config-poc/appsettings.opcion1.json" \
+                          --variables "{\\"ConnectionStrings\\":{\\"DefaultConnection\\":\\"$CONN_STR\\"}}"
+                    '''
                     sh '''
                         export ASPNETCORE_ENVIRONMENT=opcion1
-                        dotnet run --project config-poc --urls http://localhost:5001 &
+                        dotnet run --project config-poc --no-launch-profile --urls http://localhost:5001 &
                         APP_PID=$!
-                        sleep 8
+                        sleep 10
                         curl -sf http://localhost:5001/config
                         curl -sf http://localhost:5001/db-check
                         kill $APP_PID
@@ -55,9 +58,9 @@ pipeline {
                     sh '''
                         export ASPNETCORE_ENVIRONMENT=opcion2
                         export ConnectionStrings__DefaultConnection="$CONN_STR"
-                        dotnet run --project config-poc --urls http://localhost:5002 &
+                        dotnet run --project config-poc --no-launch-profile --urls http://localhost:5002 &
                         APP_PID=$!
-                        sleep 8
+                        sleep 10
                         curl -sf http://localhost:5002/config
                         curl -sf http://localhost:5002/db-check
                         kill $APP_PID
